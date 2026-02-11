@@ -93,6 +93,12 @@ class Comparison(Expr):
 
 
 @dataclass
+class NotExpr(Expr):
+    expr: Expr
+    loc: Optional[SourceLoc] = None
+
+
+@dataclass
 class FunctionCall(Expr):
     name: str
     args: list[Expr] = field(default_factory=list)

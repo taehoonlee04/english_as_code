@@ -41,6 +41,7 @@ run(lower(prog), dry_run=True)
 
 - **grammar/** — EBNF grammar, keywords, sentence templates
 - **src/eac/** — Lexer, parser, type checker, IR lowering, runtime, CLI
+- **editor/** — Web editor (same repo): edit EAC, Run, Add step wizard, AI authoring (plain English → EAC)
 - **tests/examples/** — Example `.eac` programs
 
 ## Commands (CLI)
@@ -73,6 +74,18 @@ Then use the venv for commands:
 .venv/bin/eac parse tests/examples/aging_report.eac
 .venv/bin/pytest tests/ -v
 ```
+
+## Web Editor
+
+A minimal web UI for editing and running EAC, with a step wizard and AI authoring (plain English → EAC):
+
+```bash
+.venv/bin/pip install -e ".[editor]"
+# Start server; if port 8000 is in use, run: PORT=8001 PYTHONPATH=src .venv/bin/python -m editor.backend.main
+PYTHONPATH=src .venv/bin/python -m editor.backend.main
+```
+
+Open http://localhost:8000. See [editor/README.md](editor/README.md) for details and optional `OPENAI_API_KEY` for "Generate from description".
 
 ## License
 

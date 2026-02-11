@@ -28,6 +28,7 @@ def _stmt_to_step(stmt: Statement, index: int, counter: list[int] | None = None)
         SetVar,
         AddColumn,
         FilterTable,
+        SortTable,
         ExportTable,
         CallResult,
         UseSystem,
@@ -73,6 +74,14 @@ def _stmt_to_step(stmt: Statement, index: int, counter: list[int] | None = None)
             id=step_id,
             op="table.filter",
             args={"table": stmt.table, "condition": _expr_to_arg(stmt.condition)},
+            result=stmt.table,
+            result_type="table",
+        )
+    if isinstance(stmt, SortTable):
+        return IRStep(
+            id=step_id,
+            op="table.sort",
+            args={"table": stmt.table, "by": _expr_to_arg(stmt.by), "ascending": stmt.ascending},
             result=stmt.table,
             result_type="table",
         )
@@ -135,6 +144,8 @@ def _stmt_to_step(stmt: Statement, index: int, counter: list[int] | None = None)
 def _expr_to_arg(expr: Any) -> Any:
     """Turn an AST expression into a JSON-serializable value for IR args."""
     from eac.ast_nodes import (
+        Comparison,
+        NotExpr,
         NumberLit,
         StringLit,
         MoneyLit,
@@ -154,4 +165,13 @@ def _expr_to_arg(expr: Any) -> Any:
         return {"type": "ref", "name": expr.name}
     if isinstance(expr, QualifiedRef):
         return {"type": "qualified", "base": expr.base, "field": expr.field}
+    if isinstance(expr, Comparison):
+        return {
+            "type": "comparison",
+            "left": _expr_to_arg(expr.left),
+            "op": expr.op.value if hasattr(expr.op, "value") else str(expr.op),
+            "right": _expr_to_arg(expr.right),
+        }
+    if isinstance(expr, NotExpr):
+        return {"type": "not", "expr": _expr_to_arg(expr.expr)}
     return {"type": "unknown"}

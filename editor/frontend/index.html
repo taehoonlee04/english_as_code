@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>English as Code</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <style>
+    :root {
+      --color-white: #FFFFFF;
+      --color-gray-50: #F9FAFB;
+      --color-gray-100: #F3F4F6;
+      --color-gray-200: #E5E7EB;
+      --color-gray-300: #D1D5DB;
+      --color-gray-400: #9CA3AF;
+      --color-gray-500: #6B7280;
+      --color-gray-600: #4B5563;
+      --color-gray-700: #374151;
+      --color-gray-800: #1F2937;
+      --color-gray-900: #111827;
+
+      --bg: var(--color-gray-50);
+      --bg-elevated: var(--color-white);
+      --bg-inset: var(--color-gray-100);
+      --text-primary: var(--color-gray-900);
+      --text-secondary: var(--color-gray-600);
+      --text-tertiary: var(--color-gray-400);
+      --border: var(--color-gray-200);
+
+      --color-indigo-50: #EEF2FF;
+      --color-indigo-100: #E0E7FF;
+      --color-indigo-400: #818CF8;
+      --color-indigo-500: #6366F1;
+      --color-indigo-600: #4F46E5;
+      --accent: var(--color-indigo-500);
+      --accent-hover: var(--color-indigo-600);
+      --accent-subtle: var(--color-indigo-50);
+      --accent-text: var(--color-white);
+
+      --color-green-50: #F0FDF4;
+      --color-green-600: #16A34A;
+      --color-green-700: #15803D;
+      --color-amber-50: #FFFBEB;
+      --color-amber-600: #D97706;
+      --color-red-50: #FEF2F2;
+      --color-red-500: #EF4444;
+      --color-red-600: #DC2626;
+      --color-red-700: #B91C1C;
+
+      --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, monospace;
+      --text-xs: 0.75rem;
+      --text-sm: 0.875rem;
+      --text-base: 1rem;
+      --text-lg: 1.125rem;
+      --text-xl: 1.25rem;
+      --text-2xl: 1.5rem;
+      --text-3xl: 1.875rem;
+
+      --space-1: 0.25rem;
+      --space-2: 0.5rem;
+      --space-3: 0.75rem;
+      --space-4: 1rem;
+      --space-5: 1.25rem;
+      --space-6: 1.5rem;
+      --space-8: 2rem;
+      --space-10: 2.5rem;
+      --space-12: 3rem;
+
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      --radius-full: 9999px;
+
+      --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+      --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04);
+
+      --transition-fast: 150ms ease;
+      --transition-normal: 250ms ease;
+      --transition-slow: 350ms ease;
+
+      --header-height: 56px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* --- Header --- */
+    .app-header {
+      height: var(--header-height);
+      background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-6);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+      gap: var(--space-4);
+    }
+    .app-logo {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-weight: 700;
+      font-size: var(--text-base);
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+    .app-logo-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--accent);
+      color: var(--accent-text);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-sm);
+      font-weight: 700;
+    }
+    .app-nav {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-left: auto;
+    }
+    .nav-divider {
+      width: 1px;
+      height: 24px;
+      background: var(--border);
+      margin: 0 var(--space-1);
+    }
+    .app-status {
+      font-size: var(--text-xs);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+    }
+
+    /* --- Buttons --- */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-md);
+      font-family: var(--font-sans);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all var(--transition-fast);
+      line-height: 1.4;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .btn-primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+    .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+    .btn-secondary { background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border); }
+    .btn-secondary:hover { background: var(--bg-inset); border-color: var(--color-gray-300); }
+    .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid transparent; }
+    .btn-ghost:hover { background: var(--bg-inset); color: var(--text-primary); }
+    .btn-lg { padding: var(--space-3) var(--space-6); font-size: var(--text-base); border-radius: var(--radius-lg); }
+    .btn-sm { padding: var(--space-1) var(--space-3); font-size: var(--text-xs); }
+    .btn[disabled] { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+    .btn .btn-icon { display: inline-flex; }
+    .btn.loading .btn-icon { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* --- Main --- */
+    .app-main { flex: 1; display: flex; flex-direction: column; }
+
+    /* --- Hero Section --- */
+    .hero-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - var(--header-height));
+      padding: var(--space-8) var(--space-6);
+      text-align: center;
+      transition: opacity var(--transition-normal), transform var(--transition-normal);
+    }
+    .hero-section.fade-out { opacity: 0; transform: translateY(-20px); pointer-events: none; }
+    .hero-content { max-width: 640px; width: 100%; }
+    .hero-badge {
+      display: inline-block;
+      background: var(--accent-subtle);
+      color: var(--accent);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-full);
+      margin-bottom: var(--space-4);
+    }
+    .hero-title {
+      font-size: var(--text-3xl);
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.25;
+      margin-bottom: var(--space-3);
+    }
+    .hero-subtitle {
+      font-size: var(--text-lg);
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: var(--space-8);
+    }
+
+    /* --- AI Prompt Card --- */
+    .ai-prompt-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+      box-shadow: var(--shadow-lg);
+      text-align: left;
+    }
+    .ai-prompt-label {
+      display: block;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: var(--space-3);
+    }
+    .ai-prompt-input {
+      width: 100%;
+      min-height: 120px;
+      padding: var(--space-4);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      font-family: var(--font-sans);
+      font-size: var(--text-base);
+      line-height: 1.6;
+      color: var(--text-primary);
+      background: var(--bg);
+      resize: vertical;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    .ai-prompt-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
+    .ai-prompt-input::placeholder { color: var(--text-tertiary); }
+    .ai-prompt-footer {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-top: var(--space-4);
+      gap: var(--space-4);
+    }
+    .ai-prompt-hint { font-size: var(--text-xs); color: var(--text-tertiary); max-width: 320px; line-height: 1.5; }
+
+    /* --- Hero extras --- */
+    .hero-divider {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      margin: var(--space-6) 0;
+      color: var(--text-tertiary);
+      font-size: var(--text-sm);
+    }
+    .hero-divider::before, .hero-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .hero-examples { margin-top: var(--space-4); }
+    .hero-examples-label { font-size: var(--text-sm); color: var(--text-tertiary); margin-bottom: var(--space-2); }
+    .example-chips { display: flex; gap: var(--space-2); flex-wrap: wrap; justify-content: center; }
+    .chip {
+      display: inline-block;
+      padding: var(--space-2) var(--space-3);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      font-family: var(--font-sans);
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    .chip:hover { background: var(--accent-subtle); color: var(--accent); border-color: var(--color-indigo-100); }
+
+    /* --- Workspace --- */
+    .workspace-section {
+      flex: 1;
+      padding: var(--space-6);
+      max-width: 1280px;
+      margin: 0 auto;
+      width: 100%;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity var(--transition-normal), transform var(--transition-normal);
+    }
+    .workspace-section.visible { opacity: 1; transform: translateY(0); }
+    .workspace-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-6);
+      min-height: calc(100vh - var(--header-height) - var(--space-12));
+    }
+
+    /* --- Panels --- */
+    .panel {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-4) var(--space-5);
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-title { font-size: var(--text-base); font-weight: 600; }
+    .panel-body { flex: 1; overflow-y: auto; padding: var(--space-4); min-height: 200px; }
+    .panel-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-3) var(--space-5);
+      border-top: 1px solid var(--border);
+      background: var(--bg-inset);
+      font-size: var(--text-xs);
+      color: var(--text-tertiary);
+    }
+
+    /* --- Code Display --- */
+    .code-sentence {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-md);
+      transition: background var(--transition-fast);
+      cursor: text;
+    }
+    .code-sentence:hover { background: var(--bg-inset); }
+    .code-sentence-number {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--text-tertiary);
+      background: var(--bg-inset);
+      border-radius: var(--radius-full);
+      margin-top: 1px;
+    }
+    .code-sentence-text {
+      font-family: var(--font-mono);
+      font-size: var(--text-sm);
+      line-height: 1.6;
+      color: var(--text-primary);
+    }
+    .code-kw { color: var(--accent); font-weight: 600; }
+    .code-string { color: var(--color-green-700); }
+    .code-number { color: var(--color-amber-600); }
+    .code-blank-line { height: var(--space-3); }
+    .code-comment { font-style: italic; color: var(--text-tertiary); }
+    .code-editor {
+      width: 100%;
+      height: 100%;
+      min-height: 300px;
+      padding: var(--space-4);
+      background: var(--bg);
+      color: var(--text-primary);
+      border: none;
+      resize: none;
+      font-family: var(--font-mono);
+      font-size: var(--text-sm);
+      line-height: 1.6;
+    }
+    .code-editor:focus { outline: none; }
+    .code-display { cursor: text; }
+    .code-display:empty::after {
+      content: "Your workflow steps will appear here...";
+      color: var(--text-tertiary);
+      font-size: var(--text-sm);
+    }
+
+    /* --- Results --- */
+    .results-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+      color: var(--text-tertiary);
+      text-align: center;
+      gap: var(--space-3);
+    }
+    .results-empty-icon { font-size: var(--text-2xl); opacity: 0.5; }
+    .results-empty-text { font-size: var(--text-sm); }
+
+    /* --- Trace Timeline --- */
+    .trace-timeline { display: flex; flex-direction: column; gap: var(--space-2); }
+    .trace-step {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      transition: box-shadow var(--transition-fast);
+    }
+    .trace-step:hover { box-shadow: var(--shadow-sm); }
+    .trace-step-indicator {
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+    }
+    .trace-step.success .trace-step-indicator { background: var(--color-green-50); color: var(--color-green-600); }
+    .trace-step.error .trace-step-indicator { background: var(--color-red-50); color: var(--color-red-600); }
+    .trace-step-content { flex: 1; min-width: 0; }
+    .trace-step-op { font-size: var(--text-sm); font-weight: 500; color: var(--text-primary); }
+    .trace-step-detail { font-size: var(--text-xs); color: var(--text-secondary); margin-top: 2px; }
+    .trace-step-table-btn {
+      font-size: var(--text-xs);
+      color: var(--accent);
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: var(--font-sans);
+      padding: 2px 0;
+      text-decoration: underline;
+      margin-top: 2px;
+      display: inline-block;
+    }
+    .trace-step-table-btn:hover { color: var(--accent-hover); }
+
+    /* --- Table Preview --- */
+    .table-preview-wrapper {
+      margin-top: var(--space-4);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .table-preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-3) var(--space-4);
+      background: var(--bg-inset);
+      border-bottom: 1px solid var(--border);
+      font-size: var(--text-sm);
+    }
+    .data-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+    .data-table th {
+      padding: var(--space-2) var(--space-3);
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: var(--bg-inset);
+      border-bottom: 2px solid var(--border);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .data-table td {
+      padding: var(--space-2) var(--space-3);
+      border-bottom: 1px solid var(--bg-inset);
+      color: var(--text-primary);
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: var(--color-indigo-50); }
+    .table-row-count { font-size: var(--text-xs); color: var(--text-tertiary); }
+
+    /* --- Error Card --- */
+    .error-card {
+      display: flex;
+      gap: var(--space-4);
+      padding: var(--space-5);
+      background: var(--color-red-50);
+      border: 1px solid var(--color-red-500);
+      border-radius: var(--radius-lg);
+    }
+    .error-card-icon { font-size: var(--text-2xl); flex-shrink: 0; }
+    .error-card-message { font-size: var(--text-sm); font-weight: 500; color: var(--color-red-700); margin-bottom: var(--space-2); }
+    .error-card-suggestion { font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: var(--space-2); }
+    .error-card-line { font-size: var(--text-xs); color: var(--text-tertiary); }
+
+    /* --- Toast --- */
+    .toast-container {
+      position: fixed;
+      bottom: var(--space-6);
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      z-index: 300;
+      pointer-events: none;
+    }
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-5);
+      border-radius: var(--radius-lg);
+      background: var(--color-gray-800);
+      color: var(--color-white);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      pointer-events: auto;
+      animation: toastIn var(--transition-normal);
+      min-width: 280px;
+      max-width: 480px;
+    }
+    .toast-success { background: var(--color-green-600); }
+    .toast-error { background: var(--color-red-600); }
+    .toast-warning { background: var(--color-amber-600); }
+    .toast-out { animation: toastOut var(--transition-fast) forwards; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes toastOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(12px); } }
+
+    /* --- Modal --- */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      animation: fadeIn var(--transition-fast);
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal {
+      background: var(--bg-elevated);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xl);
+      width: 90%;
+      max-width: 560px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      animation: slideUp var(--transition-normal);
+    }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-5) var(--space-6);
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-title { font-size: var(--text-lg); font-weight: 600; }
+    .modal-close { font-size: var(--text-xl); padding: var(--space-1); line-height: 1; }
+    .modal-body { flex: 1; overflow-y: auto; padding: var(--space-5) var(--space-6); }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-3);
+      padding: var(--space-4) var(--space-6);
+      border-top: 1px solid var(--border);
+    }
+    .wizard-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+    .wizard-type-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-5) var(--space-4);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      font-family: var(--font-sans);
+      text-align: center;
+    }
+    .wizard-type-card:hover { border-color: var(--accent); background: var(--accent-subtle); box-shadow: var(--shadow-sm); }
+    .wizard-type-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .wizard-type-icon { font-size: var(--text-2xl); }
+    .wizard-type-name { font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); }
+    .wizard-type-desc { font-size: var(--text-xs); color: var(--text-tertiary); }
+    .wizard-field-group { margin-bottom: var(--space-4); }
+    .wizard-field-group label {
+      display: block;
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: var(--space-1);
+    }
+    .wizard-field-group input,
+    .wizard-field-group select {
+      width: 100%;
+      padding: var(--space-3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      font-family: var(--font-sans);
+      font-size: var(--text-sm);
+      color: var(--text-primary);
+      background: var(--bg);
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    .wizard-field-group input:focus,
+    .wizard-field-group select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
+    .wizard-preview {
+      margin-top: var(--space-4);
+      padding: var(--space-3) var(--space-4);
+      background: var(--bg-inset);
+      border-radius: var(--radius-md);
+      border: 1px dashed var(--border);
+    }
+    .wizard-preview-label { font-size: var(--text-xs); color: var(--text-tertiary); margin-bottom: var(--space-1); display: block; }
+    .wizard-preview-code { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--text-primary); }
+
+    /* --- Skeleton loading --- */
+    .skeleton-line {
+      height: 16px;
+      background: linear-gradient(90deg, var(--bg-inset) 25%, var(--border) 50%, var(--bg-inset) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: var(--radius-sm);
+      margin-bottom: var(--space-2);
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* --- Status spinner --- */
+    .status-spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: var(--space-1);
+    }
+
+    /* --- Raw output --- */
+    .raw-output {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      line-height: 1.5;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      word-break: break-word;
+      padding: var(--space-4);
+      background: var(--bg-inset);
+      border-radius: var(--radius-md);
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    /* --- Autocomplete dropdown --- */
+    .autocomplete-wrapper { position: relative; width: 100%; height: 100%; }
+    .autocomplete-dropdown {
+      position: absolute;
+      z-index: 50;
+      min-width: 220px;
+      max-width: 380px;
+      max-height: 240px;
+      overflow-y: auto;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: var(--space-1) 0;
+      font-family: var(--font-sans);
+    }
+    .ac-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-2) var(--space-3);
+      cursor: pointer;
+      transition: background var(--transition-fast);
+      font-size: var(--text-sm);
+      color: var(--text-primary);
+    }
+    .ac-item:hover, .ac-item.active {
+      background: var(--accent-subtle);
+    }
+    .ac-item.active {
+      color: var(--accent);
+    }
+    .ac-item-text { flex: 1; min-width: 0; }
+    .ac-item-match { font-weight: 600; }
+    .ac-item-hint {
+      font-size: var(--text-xs);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 160px;
+    }
+    .ac-item-badge {
+      font-size: 0.65rem;
+      padding: 1px 6px;
+      border-radius: var(--radius-full);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+    }
+    .ac-badge-keyword { background: var(--accent-subtle); color: var(--accent); }
+    .ac-badge-table { background: var(--color-green-50); color: var(--color-green-700); }
+    .ac-badge-variable { background: var(--color-amber-50); color: var(--color-amber-600); }
+    .ac-badge-operator { background: var(--bg-inset); color: var(--text-secondary); }
+    .ac-badge-template { background: var(--color-indigo-100); color: var(--color-indigo-600); }
+
+    /* --- Utilities --- */
+    .hidden { display: none !important; }
+    *:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* --- Responsive --- */
+    @media (max-width: 1023px) {
+      .workspace-layout { grid-template-columns: 1fr; gap: var(--space-4); }
+      .hero-section { padding: var(--space-6) var(--space-4); min-height: auto; padding-top: var(--space-12); }
+      .hero-title { font-size: var(--text-2xl); }
+    }
+    @media (max-width: 767px) {
+      .app-header { height: auto; padding: var(--space-3) var(--space-4); flex-wrap: wrap; gap: var(--space-2); }
+      .app-nav { width: 100%; overflow-x: auto; padding-top: var(--space-2); gap: var(--space-1); }
+      .wizard-type-grid { grid-template-columns: 1fr; }
+      .modal { width: 95%; max-height: 90vh; }
+      .ai-prompt-footer { flex-direction: column; align-items: stretch; }
+      .ai-prompt-hint { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-logo">
+      <div class="app-logo-icon">E</div>
+      <span>English as Code</span>
+    </div>
+    <nav class="app-nav hidden" id="appNav">
+      <button type="button" class="btn btn-ghost btn-sm" id="btnNew" aria-label="Start a new workflow">+ New</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="btnAddStep" aria-label="Add a step using the wizard">Add Step</button>
+      <div class="nav-divider" aria-hidden="true"></div>
+      <button type="button" class="btn btn-secondary btn-sm" id="btnCheck" aria-label="Check for errors">Check</button>
+      <button type="button" class="btn btn-primary btn-sm" id="btnRun" aria-label="Run this workflow">
+        <span class="btn-icon" id="runIcon">&#9654;</span> Run
+      </button>
+    </nav>
+    <div class="app-status" id="appStatus" aria-live="polite"></div>
+  </header>
+
+  <main class="app-main">
+    <!-- Landing state: hero with AI prompt -->
+    <section class="hero-section" id="heroSection">
+      <div class="hero-content">
+        <div class="hero-badge">Powered by AI</div>
+        <h1 class="hero-title">Automate your spreadsheet workflows</h1>
+        <p class="hero-subtitle">
+          Describe what you want to do in plain English.<br />
+          We'll turn it into a runnable automation.
+        </p>
+        <div class="ai-prompt-card">
+          <label for="aiPrompt" class="ai-prompt-label">What would you like to automate?</label>
+          <textarea
+            id="aiPrompt"
+            class="ai-prompt-input"
+            rows="4"
+            placeholder="Example: Open the accounts receivable workbook, read the open items sheet, filter for items with a positive balance, add a column for days past due, and export the results to a CSV file."
+            aria-describedby="aiPromptHint"
+          ></textarea>
+          <div class="ai-prompt-footer">
+            <span class="ai-prompt-hint" id="aiPromptHint">
+              Tip: Be specific about file names, sheet names, and what you want to filter or calculate.
+            </span>
+            <button type="button" class="btn btn-primary btn-lg" id="btnGenerate" aria-label="Generate automation from description">
+              <span class="btn-icon" id="generateIcon">&#10024;</span>
+              Generate
+            </button>
+          </div>
+        </div>
+        <div class="hero-divider"><span>or</span></div>
+        <button type="button" class="btn btn-ghost" id="btnStartScratch">Start from a blank workflow</button>
+        <div class="hero-examples">
+          <p class="hero-examples-label">Try an example:</p>
+          <div class="example-chips">
+            <button type="button" class="chip" data-example="aging">AR Aging Report</button>
+            <button type="button" class="chip" data-example="reconcile">Bank Reconciliation</button>
+            <button type="button" class="chip" data-example="invoice">Invoice Summary</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Workspace state: code + results -->
+    <section class="workspace-section hidden" id="workspaceSection">
+      <div class="workspace-layout">
+        <div class="panel" id="codePanel">
+          <div class="panel-header">
+            <h2 class="panel-title">Your Workflow</h2>
+            <button type="button" class="btn btn-ghost btn-sm" id="btnToggleEdit">
+              <span id="editToggleLabel">Edit</span>
+            </button>
+          </div>
+          <div class="panel-body">
+            <div class="code-display" id="codeDisplay" role="button" tabindex="0" aria-label="Click to edit workflow"></div>
+            <div class="autocomplete-wrapper hidden" id="acWrapper">
+              <textarea id="source" class="code-editor" spellcheck="false" aria-label="Edit workflow source code" placeholder="Your workflow steps will appear here..." autocomplete="off"></textarea>
+              <div class="autocomplete-dropdown hidden" id="acDropdown" role="listbox" aria-label="Autocomplete suggestions"></div>
+            </div>
+          </div>
+          <div class="panel-footer">
+            <span id="lineCount">0 steps</span>
+            <button type="button" class="btn btn-ghost btn-sm" id="btnCopySource" aria-label="Copy to clipboard">Copy</button>
+          </div>
+        </div>
+        <div class="panel" id="resultsPanel">
+          <div class="panel-header">
+            <h2 class="panel-title">Results</h2>
+            <button type="button" class="btn btn-ghost btn-sm hidden" id="btnRawOutput">View raw</button>
+          </div>
+          <div class="panel-body">
+            <div class="results-empty" id="resultsEmpty">
+              <div class="results-empty-icon">&#9654;</div>
+              <p class="results-empty-text">Run your workflow to see results here.</p>
+            </div>
+            <div class="trace-timeline hidden" id="traceTimeline"></div>
+            <div class="hidden" id="tablePreview"></div>
+            <pre class="raw-output hidden" id="rawOutput"></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    <!-- Wizard modal -->
+    <div class="modal-overlay hidden" id="wizardOverlay" role="dialog" aria-modal="true" aria-labelledby="wizardTitle">
+      <div class="modal" id="wizardModal">
+        <div class="modal-header">
+          <h2 class="modal-title" id="wizardTitle">Add a Step</h2>
+          <button type="button" class="btn btn-ghost modal-close" id="btnCloseWizard" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="wizard-type-grid" id="wizardTypeGrid">
+            <button type="button" class="wizard-type-card" data-type="open_workbook">
+              <span class="wizard-type-icon">&#128218;</span>
+              <span class="wizard-type-name">Open workbook</span>
+              <span class="wizard-type-desc">Load an Excel file</span>
+            </button>
+            <button type="button" class="wizard-type-card" data-type="treat_range">
+              <span class="wizard-type-icon">&#128202;</span>
+              <span class="wizard-type-name">Read table</span>
+              <span class="wizard-type-desc">Read a range as a named table</span>
+            </button>
+            <button type="button" class="wizard-type-card" data-type="set_var">
+              <span class="wizard-type-icon">&#128196;</span>
+              <span class="wizard-type-name">Set variable</span>
+              <span class="wizard-type-desc">Store a value for later</span>
+            </button>
+            <button type="button" class="wizard-type-card" data-type="add_column">
+              <span class="wizard-type-icon">&#10133;</span>
+              <span class="wizard-type-name">Add column</span>
+              <span class="wizard-type-desc">Add a calculated column</span>
+            </button>
+            <button type="button" class="wizard-type-card" data-type="filter">
+              <span class="wizard-type-icon">&#128269;</span>
+              <span class="wizard-type-name">Filter rows</span>
+              <span class="wizard-type-desc">Keep rows matching a condition</span>
+            </button>
+            <button type="button" class="wizard-type-card" data-type="sort">
+              <span class="wizard-type-icon">&#8645;</span>
+              <span class="wizard-type-name">Sort table</span>
+              <span class="wizard-type-desc">Order rows by a column</span>
+            </button>
+            <button type="button" class="wizard-type-card" data-type="export">
+              <span class="wizard-type-icon">&#128190;</span>
+              <span class="wizard-type-name">Export</span>
+              <span class="wizard-type-desc">Save results to a file</span>
+            </button>
+          </div>
+          <div class="wizard-fields hidden" id="wizardFieldsContainer">
+            <button type="button" class="btn btn-ghost btn-sm" id="btnWizardBack" style="margin-bottom: var(--space-4)">&larr; Back</button>
+            <div id="stepFields"></div>
+            <div class="wizard-preview" id="wizardPreview">
+              <span class="wizard-preview-label">Preview:</span>
+              <code class="wizard-preview-code" id="wizardPreviewCode">(fill in the fields above)</code>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer hidden" id="wizardFooter">
+          <button type="button" class="btn btn-secondary" id="btnCancelWizard">Cancel</button>
+          <button type="button" class="btn btn-primary" id="btnInsertStep">Insert Step</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -70,8 +70,13 @@ def run_cmd(
     file: Path = typer.Argument(..., help=".eac file"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Validate only, do not execute"),
 ):
-    """Parse, lower, and execute the program."""
+    """Parse, type-check, lower, and execute the program."""
     program = _parse_and_catch(file)
+    try:
+        check(program)
+    except EACError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1)
     ir = lower(program)
     trace_path = file.with_suffix(file.suffix + ".trace.jsonl")
     try:

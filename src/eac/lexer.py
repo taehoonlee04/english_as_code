@@ -61,9 +61,9 @@ def load_keywords() -> set[str]:
     # Fallback when yaml not installed or file missing
     return {
         "Open", "workbook", "In", "sheet", "treat", "range", "as", "table", "Set", "to",
-        "Add", "column", "Filter", "where", "Export", "Use", "system", "version", "Log",
+        "Add", "column", "Filter", "where", "Sort", "by", "ascending", "descending", "Export", "Use", "system", "version", "Log",
         "in", "out", "credential", "Go", "page", "Enter", "Click", "Extract", "from",
-        "field", "element", "For", "each", "Call", "result", "date", "row",
+        "field", "element", "For", "each", "Call", "result", "date", "row", "not",
     }
 
 
@@ -101,9 +101,9 @@ def tokenize(source: str, path: Optional[str] = None) -> list[Token]:
         return c
 
     def peek() -> Optional[str]:
-        if i >= len(source):
+        if i + 1 >= len(source):
             return None
-        return source[i]
+        return source[i + 1]
 
     def skip_whitespace_line() -> bool:
         """Skip spaces on current line; return True if we hit newline (line is blank)."""
@@ -140,7 +140,7 @@ def tokenize(source: str, path: Optional[str] = None) -> list[Token]:
             advance()
             continue
 
-        if c == "-" and peek() and source[i + 1] == "-":
+        if c == "-" and peek() == "-":
             advance()
             advance()
             col -= 2  # report start of comment

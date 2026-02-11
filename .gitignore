@@ -38,3 +38,6 @@ htmlcov/
 
 # EAC runtime artifacts
 *.trace.jsonl
+
+# Editor: generated export output when running sample in web app
+editor/fixtures/output/

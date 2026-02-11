@@ -18,11 +18,13 @@ from eac.ast_nodes import (
     LogIn,
     LogOut,
     MoneyLit,
+    NotExpr,
     NumberLit,
     OpenWorkbook,
     Program,
     QualifiedRef,
     SetVar,
+    SortTable,
     SourceLoc,
     Statement,
     StringLit,
@@ -119,6 +121,10 @@ class Parser:
         if self.at(TokenKind.KEYWORD, "Filter"):
             return self.parse_filter_table()
 
+        # Sort X by expr ascending|descending.
+        if self.at(TokenKind.KEYWORD, "Sort"):
+            return self.parse_sort_table()
+
         # Export expr to "path".
         if self.at(TokenKind.KEYWORD, "Export"):
             return self.parse_export()
@@ -196,8 +202,12 @@ class Parser:
         self.expect(TokenKind.COMMA)
         self.expect(TokenKind.KEYWORD, "treat")
         self.expect(TokenKind.KEYWORD, "range")
-        range_t = self.expect(TokenKind.IDENT)  # or range literal A1:G999
+        range_t = self.expect(TokenKind.IDENT)
         range_spec = range_t.value
+        if self.at(TokenKind.COLON):
+            self.advance()
+            end_t = self.expect(TokenKind.IDENT)
+            range_spec = f"{range_spec}:{end_t.value}"
         self.expect(TokenKind.KEYWORD, "as")
         self.expect(TokenKind.KEYWORD, "table")
         name_t = self.expect(TokenKind.IDENT)
@@ -247,6 +257,21 @@ class Parser:
         condition = self.parse_expression()
         self.expect(TokenKind.DOT)
         return FilterTable(table=table_t.value, condition=condition, loc=self.loc(start))
+
+    def parse_sort_table(self) -> SortTable:
+        start = self.advance()  # Sort
+        table_t = self.expect(TokenKind.IDENT)
+        self.expect(TokenKind.KEYWORD, "by")
+        by_expr = self.parse_expression()
+        ascending = True
+        if self.at(TokenKind.KEYWORD, "ascending"):
+            self.advance()
+            ascending = True
+        elif self.at(TokenKind.KEYWORD, "descending"):
+            self.advance()
+            ascending = False
+        self.expect(TokenKind.DOT)
+        return SortTable(table=table_t.value, by=by_expr, ascending=ascending, loc=self.loc(start))
 
     def parse_export(self) -> ExportTable:
         start = self.advance()  # Export
@@ -369,6 +394,13 @@ class Parser:
         return left
 
     def parse_term(self) -> Any:
+        return self.parse_unary()
+
+    def parse_unary(self) -> Any:
+        if self.at(TokenKind.KEYWORD, "not"):
+            start = self.advance()
+            inner = self.parse_unary()
+            return NotExpr(expr=inner, loc=self.loc(start))
         return self.parse_primary()
 
     def parse_primary(self) -> Any:
