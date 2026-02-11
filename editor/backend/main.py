@@ -3,7 +3,9 @@ EAC Web Editor backend. Serves API for run, check, templates, and AI authoring.
 Run from repo root: python -m editor.backend.main  (or uvicorn editor.backend.main:app --reload)
 """
 
+import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -26,7 +28,7 @@ except ImportError:
     pass
 
 import yaml
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File as FastAPIFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -74,6 +76,138 @@ class AIAuthorResponse(BaseModel):
     source: str | None = None
     error: str | None = None
     parse_error: str | None = None
+
+
+class UploadResponse(BaseModel):
+    ok: bool
+    filename: str
+    size: int
+    path: str
+
+
+class FileInfo(BaseModel):
+    name: str
+    size: int
+    path: str
+
+
+class FilesResponse(BaseModel):
+    files: list[FileInfo]
+
+
+ALLOWED_EXTENSIONS = {".xlsx", ".xls", ".csv"}
+MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB
+
+# JSON schema for OpenAI structured output — the LLM returns steps in this format
+# instead of raw EAC text, so we can deterministically assemble valid syntax.
+EAC_STEPS_SCHEMA = {
+    "name": "eac_steps",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "steps": {
+                "type": "array",
+                "items": {
+                    "anyOf": [
+                        {
+                            "type": "object",
+                            "properties": {
+                                "op": {"type": "string", "enum": ["open_workbook"]},
+                                "path": {"type": "string"},
+                            },
+                            "required": ["op", "path"],
+                            "additionalProperties": False,
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "op": {"type": "string", "enum": ["treat_range"]},
+                                "sheet": {"type": "string"},
+                                "range": {"type": "string"},
+                                "table": {"type": "string"},
+                            },
+                            "required": ["op", "sheet", "range", "table"],
+                            "additionalProperties": False,
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "op": {"type": "string", "enum": ["set_var"]},
+                                "var": {"type": "string"},
+                                "value": {"type": "string"},
+                            },
+                            "required": ["op", "var", "value"],
+                            "additionalProperties": False,
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "op": {"type": "string", "enum": ["call_result"]},
+                                "id": {"type": "string"},
+                            },
+                            "required": ["op", "id"],
+                            "additionalProperties": False,
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "op": {"type": "string", "enum": ["add_column"]},
+                                "col": {"type": "string"},
+                                "table": {"type": "string"},
+                                "expr": {"type": "string"},
+                            },
+                            "required": ["op", "col", "table", "expr"],
+                            "additionalProperties": False,
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "op": {"type": "string", "enum": ["filter"]},
+                                "table": {"type": "string"},
+                                "condition": {"type": "string"},
+                            },
+                            "required": ["op", "table", "condition"],
+                            "additionalProperties": False,
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "op": {"type": "string", "enum": ["sort"]},
+                                "table": {"type": "string"},
+                                "by": {"type": "string"},
+                                "dir": {"type": "string", "enum": ["ascending", "descending"]},
+                            },
+                            "required": ["op", "table", "by", "dir"],
+                            "additionalProperties": False,
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "op": {"type": "string", "enum": ["export"]},
+                                "expr": {"type": "string"},
+                                "path": {"type": "string"},
+                            },
+                            "required": ["op", "expr", "path"],
+                            "additionalProperties": False,
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "op": {"type": "string", "enum": ["comment"]},
+                                "text": {"type": "string"},
+                            },
+                            "required": ["op", "text"],
+                            "additionalProperties": False,
+                        },
+                    ]
+                },
+            }
+        },
+        "required": ["steps"],
+        "additionalProperties": False,
+    },
+}
 
 
 def _serializable_trace(trace: list[dict]) -> list[dict]:
@@ -209,8 +343,82 @@ def api_grammar_prompt() -> str:
     return _templates_for_prompt()
 
 
-def _call_llm_for_eac(prompt: str, parse_error: str | None = None) -> str:
-    """Call OpenAI-compatible API to generate EAC. Uses OPENAI_API_KEY or OPENAI_BASE_URL."""
+def _assemble_eac_line(step: dict) -> str:
+    """Deterministic template for each op type. Mirrors frontend's getStepLine() at app.js:690-712."""
+    op = step.get("op", "")
+    if op == "open_workbook":
+        return f'Open workbook "{step["path"]}".'
+    elif op == "treat_range":
+        return f'In sheet "{step["sheet"]}", treat range {step["range"]} as table {step["table"]}.'
+    elif op == "set_var":
+        return f'Set {step["var"]} to {step["value"]}.'
+    elif op == "call_result":
+        return f'Call result {step["id"]}.'
+    elif op == "add_column":
+        return f'Add column {step["col"]} to {step["table"]} as {step["expr"]}.'
+    elif op == "filter":
+        return f'Filter {step["table"]} where {step["condition"]}.'
+    elif op == "sort":
+        direction = step.get("dir", "ascending")
+        if direction not in ("ascending", "descending"):
+            direction = "ascending"
+        return f'Sort {step["table"]} by {step["by"]} {direction}.'
+    elif op == "export":
+        return f'Export {step["expr"]} to "{step["path"]}".'
+    elif op == "comment":
+        return f'-- {step["text"]}'
+    else:
+        return f'-- unknown op: {op}'
+
+
+def _assemble_eac(steps: list[dict]) -> str:
+    """Assemble structured steps into EAC source text."""
+    return "\n".join(_assemble_eac_line(step) for step in steps)
+
+
+def _build_json_system_prompt() -> str:
+    """Build system prompt that teaches the LLM to produce structured JSON steps instead of raw EAC."""
+    return (
+        "You are an assistant that converts natural-language descriptions into structured JSON "
+        "representing an English-as-Code (EAC) program.\n\n"
+        "Output a JSON object with a single key \"steps\", whose value is an array of step objects.\n"
+        "Each step has an \"op\" field and additional fields depending on the op:\n\n"
+        "| op             | fields                        | notes                                        |\n"
+        "| open_workbook  | path                          | file path, no quotes (e.g. data/file.xlsx)   |\n"
+        "| treat_range    | sheet, range, table           | table is an identifier (no spaces)           |\n"
+        "| set_var        | var, value                    | var is identifier; value is EAC expression   |\n"
+        "| call_result    | id                            | identifier                                   |\n"
+        "| add_column     | col, table, expr              | col is identifier; expr is EAC expression    |\n"
+        "| filter         | table, condition              | condition is EAC expression                  |\n"
+        "| sort           | table, by, dir                | dir must be \"ascending\" or \"descending\"      |\n"
+        "| export         | expr, path                    | expr is usually a table name                 |\n"
+        "| comment        | text                          | for comments                                 |\n\n"
+        "Rules:\n"
+        "- path and sheet are raw strings (no quotes — templates add them)\n"
+        "- table, var, col, id must be valid identifiers: letters, digits, underscores, no spaces\n"
+        "- value, expr, condition, by use EAC expression syntax:\n"
+        "  - Column references: TableName.ColumnName (e.g. Invoices.Balance)\n"
+        "  - Currency literals: USD 100.00, EUR 50.00\n"
+        "  - Date literals: date \"2026-01-15\"\n"
+        "  - Comparisons: >, <, >=, <=, =\n"
+        "  - Arithmetic: +, -, *, /\n"
+        "- range uses formats like A1:G999 or A1G999\n\n"
+        "Example — user asks \"open accounts_receivable.xlsx, filter items with balance over zero, "
+        "export to CSV\":\n"
+        "{\n"
+        '  "steps": [\n'
+        '    {"op": "open_workbook", "path": "data/accounts_receivable.xlsx"},\n'
+        '    {"op": "treat_range", "sheet": "Sheet1", "range": "A1:G999", "table": "Items"},\n'
+        '    {"op": "filter", "table": "Items", "condition": "Items.Balance > USD 0.00"},\n'
+        '    {"op": "export", "expr": "Items", "path": "output/result.csv"}\n'
+        "  ]\n"
+        "}\n\n"
+        "Output ONLY the JSON object. No explanation or markdown."
+    )
+
+
+def _call_llm_for_eac_json(prompt: str, parse_error: str | None = None) -> list[dict]:
+    """Call OpenAI API with structured JSON output to get EAC steps."""
     try:
         from openai import OpenAI
     except ImportError:
@@ -220,18 +428,16 @@ def _call_llm_for_eac(prompt: str, parse_error: str | None = None) -> str:
     if not api_key and not base_url:
         raise RuntimeError("Set OPENAI_API_KEY (or OPENAI_BASE_URL) for AI authoring.")
     client = OpenAI(api_key=api_key or "not-needed", base_url=base_url) if base_url else OpenAI()
-    grammar_block = _templates_for_prompt()
-    system = (
-        "You are a helpful assistant that produces English-as-Code (EAC) programs. "
-        "Output ONLY valid EAC code, no explanation. Use exactly the sentence patterns below. "
-        "One statement per line. End each statement with a period. "
-        "Rules: Use 'Set X to expr.' (with 'to'), never 'Set X as expr.'. "
-        "Table names and variable names are identifiers (no quotes). "
-        "Range can be A1:J100. Column refs: TableName.ColumnName (e.g. InvoicesTable.Balance)."
-    )
-    user_content = f"{grammar_block}\n\n---\n\nUser request: {prompt}"
+
+    system = _build_json_system_prompt()
+    user_content = f"User request: {prompt}"
     if parse_error:
-        user_content += f"\n\nPrevious attempt failed with this error. Fix the EAC output:\n{parse_error}"
+        user_content += (
+            f"\n\nThe previous attempt produced EAC that failed to parse with this error:\n"
+            f"{parse_error}\n"
+            f"Please adjust the steps to fix the issue."
+        )
+
     response = client.chat.completions.create(
         model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
         messages=[
@@ -239,53 +445,28 @@ def _call_llm_for_eac(prompt: str, parse_error: str | None = None) -> str:
             {"role": "user", "content": user_content},
         ],
         temperature=0.2,
+        response_format={
+            "type": "json_schema",
+            "json_schema": EAC_STEPS_SCHEMA,
+        },
     )
+
     text = response.choices[0].message.content if response.choices else None
     if not text or not text.strip():
         raise RuntimeError("Model returned empty content. Try a different model or prompt.")
-    text = text.strip()
-    # Strip markdown code block if present
-    if text.startswith("```"):
-        lines = text.split("\n")
-        if lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        text = "\n".join(lines).strip()
-    return text
 
-
-def _normalize_generated_eac(raw: str) -> str:
-    """Normalize common LLM output so it parses: strip bullets, semicolons -> periods, fix 'as X' -> 'as table X', turn section headers into comments."""
-    lines = []
-    for line in raw.splitlines():
-        s = line.strip()
-        if not s:
-            continue
-        if s.startswith("- ") or s.startswith("* ") or s.startswith("• "):
-            s = s[2:].strip()
-        if s.endswith(";"):
-            s = s[:-1].rstrip() + "."
-        if "treat range " in s.lower() and " as table " not in s and " as " in s:
-            s = s.replace(" as ", " as table ", 1)
-        if s.strip().lower().startswith("set ") and " as " in s and " to " not in s:
-            s = s.replace(" as ", " to ", 1)
-        if s.lower().startswith("define "):
-            s = "-- " + s
-        elif s and not s.endswith(".") and not s.rstrip().endswith('"'):
-            s = "-- " + s
-        lines.append(s)
-    return "\n".join(lines)
+    data = json.loads(text)
+    return data.get("steps", [])
 
 
 @app.post("/api/ai-author", response_model=AIAuthorResponse)
 def api_ai_author(req: AIAuthorRequest) -> AIAuthorResponse:
-    """Generate EAC from natural language. Uses parser as validator; optionally retries with error feedback."""
+    """Generate EAC from natural language using structured JSON output, then assemble into valid EAC."""
     parse_error = None
     for attempt in range(req.max_retries + 1):
         try:
-            raw = _call_llm_for_eac(req.prompt, parse_error=parse_error)
-            source = _normalize_generated_eac(raw)
+            steps = _call_llm_for_eac_json(req.prompt, parse_error=parse_error)
+            source = _assemble_eac(steps)
         except Exception as e:
             return AIAuthorResponse(ok=False, error=str(e))
         try:
@@ -299,6 +480,60 @@ def api_ai_author(req: AIAuthorRequest) -> AIAuthorResponse:
         except Exception as e:
             return AIAuthorResponse(ok=False, source=source, error=str(e))
     return AIAuthorResponse(ok=False, error="Unexpected error")
+
+
+# --- File upload endpoints ---
+
+@app.post("/api/upload", response_model=UploadResponse)
+async def api_upload(file: UploadFile = FastAPIFile(...)) -> UploadResponse:
+    """Accept a spreadsheet upload, validate extension, save to fixtures/data/."""
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"File type '{ext}' not allowed. Accepted: {', '.join(sorted(ALLOWED_EXTENSIONS))}")
+    data = await file.read()
+    if len(data) > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=400, detail=f"File too large. Maximum size is {MAX_UPLOAD_SIZE // (1024 * 1024)} MB.")
+    # Sanitize filename: keep only safe characters
+    stem = re.sub(r'[^\w\-.]', '_', Path(file.filename).stem)
+    safe_name = stem + ext
+    data_dir = _fixtures_dir / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    dest = data_dir / safe_name
+    # Deduplicate with numeric suffix
+    counter = 1
+    while dest.exists():
+        dest = data_dir / f"{stem}_{counter}{ext}"
+        safe_name = dest.name
+        counter += 1
+    dest.write_bytes(data)
+    return UploadResponse(ok=True, filename=safe_name, size=len(data), path=f"data/{safe_name}")
+
+
+@app.get("/api/files", response_model=FilesResponse)
+def api_files() -> FilesResponse:
+    """List files in fixtures/data/."""
+    data_dir = _fixtures_dir / "data"
+    if not data_dir.exists():
+        return FilesResponse(files=[])
+    files = []
+    for f in sorted(data_dir.iterdir()):
+        if f.is_file() and f.suffix.lower() in ALLOWED_EXTENSIONS:
+            files.append(FileInfo(name=f.name, size=f.stat().st_size, path=f"data/{f.name}"))
+    return FilesResponse(files=files)
+
+
+@app.delete("/api/files/{filename}")
+def api_delete_file(filename: str):
+    """Delete a file from fixtures/data/."""
+    data_dir = _fixtures_dir / "data"
+    target = data_dir / filename
+    # Prevent path traversal
+    if not target.resolve().parent == data_dir.resolve():
+        raise HTTPException(status_code=400, detail="Invalid filename.")
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="File not found.")
+    target.unlink()
+    return {"ok": True}
 
 
 # --- Static frontend ---

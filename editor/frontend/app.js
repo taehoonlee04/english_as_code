@@ -103,6 +103,10 @@
   const runIcon = document.getElementById("runIcon");
   const acWrapper = document.getElementById("acWrapper");
   const acDropdown = document.getElementById("acDropdown");
+  const fileInput = document.getElementById("fileInput");
+  const fileCardsLanding = document.getElementById("fileCardsLanding");
+  const fileCardsWorkspace = document.getElementById("fileCardsWorkspace");
+  const aiPromptHint = document.getElementById("aiPromptHint");
 
   // ========== STATE ==========
 
@@ -111,6 +115,8 @@
   let lastTrace = null;
   let selectedWizardType = null;
   let showingRaw = false;
+  let uploadedFiles = []; // {filename, size, path}
+  let uploadContext = "landing"; // "landing" | "workspace"
 
   // ========== UTILITIES ==========
 
@@ -261,6 +267,7 @@
       requestAnimationFrame(function () {
         workspaceSection.classList.add("visible");
       });
+      renderFileCards();
     }, 260);
   }
 
@@ -277,6 +284,9 @@
       aiPromptEl.value = "";
       aiPromptEl.focus();
       appStatus.textContent = "";
+      uploadedFiles = [];
+      renderFileCards();
+      updatePromptHint();
     }, 260);
   }
 
@@ -517,9 +527,16 @@
     generateIcon.innerHTML = "&#8987;";
     showToast("Generating your workflow...", "info", 10000);
 
+    // Augment prompt with uploaded file paths
+    var augmentedPrompt = prompt;
+    if (uploadedFiles.length > 0) {
+      var filePaths = uploadedFiles.map(function (f) { return '"' + f.path + '"'; }).join(", ");
+      augmentedPrompt += "\n\nThe user has uploaded these spreadsheet files: " + filePaths + ". Use these file paths in Open workbook statements.";
+    }
+
     try {
       var data = await api("/api/ai-author", {
-        prompt: prompt,
+        prompt: augmentedPrompt,
         retry_on_parse_error: true,
         max_retries: 2,
       });
@@ -723,6 +740,124 @@
     }).catch(function () {
       showToast("Could not copy.", "error", 2000);
     });
+  }
+
+  // ========== FILE UPLOAD ==========
+
+  function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  }
+
+  async function uploadFile(file) {
+    var formData = new FormData();
+    formData.append("file", file);
+    var res = await fetch("/api/upload", { method: "POST", body: formData });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Upload failed");
+    return data;
+  }
+
+  async function handleFileSelect(files) {
+    var fileList = Array.from(files);
+    for (var i = 0; i < fileList.length; i++) {
+      var f = fileList[i];
+      var ext = f.name.substring(f.name.lastIndexOf(".")).toLowerCase();
+      if (ext !== ".xlsx" && ext !== ".xls" && ext !== ".csv") {
+        showToast("Only .xlsx, .xls, and .csv files are supported.", "error");
+        continue;
+      }
+      try {
+        var result = await uploadFile(f);
+        uploadedFiles.push({ filename: result.filename, size: result.size, path: result.path });
+        showToast("Uploaded " + result.filename, "success", 3000);
+        if (uploadContext === "workspace") {
+          autoInsertOpenWorkbook(result.path);
+        }
+      } catch (e) {
+        showToast("Upload failed: " + e.message, "error");
+      }
+    }
+    renderFileCards();
+    updatePromptHint();
+    fileInput.value = "";
+  }
+
+  function renderFileCards() {
+    var html = uploadedFiles.map(function (f, i) {
+      return '<span class="file-card">' +
+        '<span class="file-card-name" title="' + escapeAttr(f.filename) + '">' + escapeHtml(f.filename) + '</span>' +
+        '<span class="file-card-size">' + formatFileSize(f.size) + '</span>' +
+        '<button type="button" class="file-card-remove" data-file-index="' + i + '" title="Remove">&times;</button>' +
+        '</span>';
+    }).join("");
+    fileCardsLanding.innerHTML = html;
+    fileCardsWorkspace.innerHTML = html;
+    // Bind remove buttons
+    document.querySelectorAll(".file-card-remove").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        removeFile(parseInt(btn.dataset.fileIndex));
+      });
+    });
+  }
+
+  async function removeFile(index) {
+    if (index < 0 || index >= uploadedFiles.length) return;
+    var f = uploadedFiles[index];
+    try {
+      await fetch("/api/files/" + encodeURIComponent(f.filename), { method: "DELETE" });
+    } catch (e) {
+      // ignore delete errors
+    }
+    uploadedFiles.splice(index, 1);
+    renderFileCards();
+    updatePromptHint();
+    showToast("Removed " + f.filename, "success", 2000);
+  }
+
+  function updatePromptHint() {
+    if (uploadedFiles.length === 0) {
+      aiPromptHint.textContent = "Tip: Be specific about file names, sheet names, and what you want to filter or calculate.";
+    } else {
+      var names = uploadedFiles.map(function (f) { return f.filename; }).join(", ");
+      aiPromptHint.textContent = "Attached: " + names + ". Your description can reference these files.";
+    }
+  }
+
+  function autoInsertOpenWorkbook(filePath) {
+    var line = 'Open workbook "' + filePath + '".';
+    var src = sourceEl.value;
+    // Skip if this exact line already exists
+    if (src.indexOf(line) !== -1) return;
+    // Insert after existing Open lines, or at the top
+    var lines = src.split("\n");
+    var insertAt = 0;
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].trim().match(/^Open\s+workbook\s+/)) {
+        insertAt = i + 1;
+      }
+    }
+    lines.splice(insertAt, 0, line);
+    sourceEl.value = lines.join("\n");
+    renderCodeDisplay(sourceEl.value);
+  }
+
+  async function loadExistingFiles() {
+    try {
+      var res = await fetch("/api/files");
+      var data = await res.json();
+      if (data.files && data.files.length) {
+        uploadedFiles = data.files.map(function (f) {
+          return { filename: f.name, size: f.size, path: f.path };
+        });
+        renderFileCards();
+        updatePromptHint();
+      }
+    } catch (e) {
+      // ignore load errors
+    }
   }
 
   // ========== AUTOCOMPLETE ENGINE ==========
@@ -1160,6 +1295,36 @@
     document.getElementById("btnCheck").addEventListener("click", check);
     btnRun.addEventListener("click", run);
     document.getElementById("btnAddStep").addEventListener("click", openWizard);
+
+    // File upload buttons
+    document.getElementById("btnUploadLanding").addEventListener("click", function () {
+      uploadContext = "landing";
+      fileInput.click();
+    });
+    document.getElementById("btnAddFile").addEventListener("click", function () {
+      uploadContext = "workspace";
+      fileInput.click();
+    });
+    fileInput.addEventListener("change", function () {
+      if (fileInput.files.length) handleFileSelect(fileInput.files);
+    });
+
+    // Drag-and-drop on AI prompt card
+    var aiCard = document.querySelector(".ai-prompt-card");
+    if (aiCard) {
+      aiCard.addEventListener("dragover", function (e) { e.preventDefault(); e.stopPropagation(); aiCard.style.borderColor = "var(--accent)"; });
+      aiCard.addEventListener("dragleave", function (e) { e.preventDefault(); e.stopPropagation(); aiCard.style.borderColor = ""; });
+      aiCard.addEventListener("drop", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        aiCard.style.borderColor = "";
+        uploadContext = "landing";
+        if (e.dataTransfer.files.length) handleFileSelect(e.dataTransfer.files);
+      });
+    }
+
+    // Load existing files on page load
+    loadExistingFiles();
 
     // Code display: click to edit
     codeDisplay.addEventListener("click", function () { setEditing(true); });

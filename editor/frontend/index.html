@@ -731,6 +731,77 @@
     .ac-badge-operator { background: var(--bg-inset); color: var(--text-secondary); }
     .ac-badge-template { background: var(--color-indigo-100); color: var(--color-indigo-600); }
 
+    /* --- Upload button --- */
+    .upload-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius-md);
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-size: var(--text-sm);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+    }
+    .upload-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-subtle); }
+
+    /* --- File card --- */
+    .file-card {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-1) var(--space-3);
+      border: 1px solid var(--color-green-600);
+      border-radius: var(--radius-full);
+      background: var(--color-green-50);
+      font-size: var(--text-xs);
+      color: var(--color-green-700);
+      white-space: nowrap;
+    }
+    .file-card-name { font-weight: 600; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+    .file-card-size { color: var(--text-tertiary); }
+    .file-card-remove {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border: none;
+      background: transparent;
+      color: var(--color-green-700);
+      cursor: pointer;
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      line-height: 1;
+      padding: 0;
+      transition: all var(--transition-fast);
+    }
+    .file-card-remove:hover { background: var(--color-red-50); color: var(--color-red-600); }
+
+    /* --- Attachment areas --- */
+    .ai-prompt-attachments {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      flex-wrap: wrap;
+      margin-top: var(--space-3);
+    }
+    .workspace-file-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      flex-wrap: wrap;
+      padding: var(--space-2) var(--space-5);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-inset);
+      min-height: 0;
+    }
+    .workspace-file-bar:empty { display: none; }
+
     /* --- Utilities --- */
     .hidden { display: none !important; }
     *:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -761,6 +832,7 @@
     <nav class="app-nav hidden" id="appNav">
       <button type="button" class="btn btn-ghost btn-sm" id="btnNew" aria-label="Start a new workflow">+ New</button>
       <button type="button" class="btn btn-secondary btn-sm" id="btnAddStep" aria-label="Add a step using the wizard">Add Step</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="btnAddFile" aria-label="Upload a spreadsheet file">Add File</button>
       <div class="nav-divider" aria-hidden="true"></div>
       <button type="button" class="btn btn-secondary btn-sm" id="btnCheck" aria-label="Check for errors">Check</button>
       <button type="button" class="btn btn-primary btn-sm" id="btnRun" aria-label="Run this workflow">
@@ -789,6 +861,10 @@
             placeholder="Example: Open the accounts receivable workbook, read the open items sheet, filter for items with a positive balance, add a column for days past due, and export the results to a CSV file."
             aria-describedby="aiPromptHint"
           ></textarea>
+          <div class="ai-prompt-attachments" id="landingAttachments">
+            <button type="button" class="upload-btn" id="btnUploadLanding">&#128206; Add file</button>
+            <span id="fileCardsLanding"></span>
+          </div>
           <div class="ai-prompt-footer">
             <span class="ai-prompt-hint" id="aiPromptHint">
               Tip: Be specific about file names, sheet names, and what you want to filter or calculate.
@@ -822,6 +898,7 @@
               <span id="editToggleLabel">Edit</span>
             </button>
           </div>
+          <div class="workspace-file-bar" id="fileCardsWorkspace"></div>
           <div class="panel-body">
             <div class="code-display" id="codeDisplay" role="button" tabindex="0" aria-label="Click to edit workflow"></div>
             <div class="autocomplete-wrapper hidden" id="acWrapper">
@@ -854,6 +931,9 @@
 
     <!-- Toast container -->
     <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    <!-- Hidden file input for uploads -->
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" multiple class="hidden" />
 
     <!-- Wizard modal -->
     <div class="modal-overlay hidden" id="wizardOverlay" role="dialog" aria-modal="true" aria-labelledby="wizardTitle">
