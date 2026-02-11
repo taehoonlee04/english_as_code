@@ -1,0 +1,89 @@
+# Reserved vocabulary for EAC lexer/parser.
+# All other identifiers are user symbols (table names, column names, variables).
+
+verbs:
+  # Data / workbook
+  - Open
+  - workbook
+  - In
+  - sheet
+  - treat
+  - range
+  - as
+  - table
+  - Set
+  - to
+  - Define
+  - Call
+  - result
+
+  # Spreadsheet ops
+  - Add
+  - column
+  - Filter
+  - where
+  - Sort
+  - by
+  - ascending
+  - descending
+  - Group
+  - Join
+  - on
+  - Lookup
+  - Export
+
+  # Web / ERP
+  - Use
+  - system
+  - version
+  - Log
+  - in
+  - out
+  - credential
+  - Go
+  - page
+  - Enter
+  - Click
+  - Select
+  - Wait
+  - until
+  - Verify
+  - Extract
+  - from
+  - field
+  - element
+  - Download
+  - file
+
+  # Control
+  - For
+  - each
+  - If
+  - Otherwise
+  - On
+  - error
+  - retry
+  - times
+  - skip
+  - stop
+  - Continue
+  - escalate
+
+  # Literals / types
+  - date
+  - timeout
+  - seconds
+  - minutes
+  - hours
+
+types:
+  - text
+  - number
+  - money
+  - datetime
+  - bool
+  - list
+  - row
+
+special:
+  - row   # current row in For each

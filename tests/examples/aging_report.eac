@@ -1,0 +1,11 @@
+-- Aging Report: AR data, overdue amounts, export summary.
+-- Version: 1.0
+
+Open workbook "data/accounts_receivable.xlsx".
+In sheet "Open Items", treat range A1G999 as table OpenItems.
+
+Set today to date "2026-02-11".
+Add column DaysPastDue to OpenItems as today.
+
+Filter OpenItems where OpenItems.Balance > USD 0.00.
+Export OpenItems to "output/aging_summary_2026-02-11.csv".

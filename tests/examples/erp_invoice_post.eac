@@ -1,0 +1,18 @@
+-- Post vendor invoices from spreadsheet to SAP.
+-- Version: 1.0
+
+Open workbook "data/invoices_batch_feb.xlsx".
+In sheet "ToPost", treat range A1F200 as table Invoices.
+
+Use system "SAP-Portal" version "2026.1".
+Log in as credential "svc_ap_bot".
+
+For each row in Invoices:
+    Go to page "Create Vendor Invoice".
+    Enter "VendorField" = row.VendorId.
+    Enter "AmountField" = row.Amount.
+    Click "PostButton".
+    Extract DocNumber from field "DocumentNumberField".
+
+Export Invoices to "output/posting_results_2026-02-11.xlsx".
+Log out.

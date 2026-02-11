@@ -1,0 +1,11 @@
+-- Reconcile bank statement against internal ledger.
+-- Version: 1.0
+
+Open workbook "data/bank_statement_feb.xlsx".
+In sheet "Transactions", treat range A1E1000 as table BankTxns.
+
+Open workbook "data/internal_ledger.xlsx".
+In sheet "GL", treat range A1F2000 as table Ledger.
+
+Filter BankTxns where BankTxns.Amount > USD 0.00.
+Export BankTxns to "output/unmatched_bank.csv".

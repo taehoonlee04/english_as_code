@@ -1,0 +1,50 @@
+# Sentence templates (CNL patterns) for reference and tooling.
+# Each maps to exactly one AST node type. Parser implements these.
+
+data:
+  - "Open workbook \"<path>\"."
+  - "In sheet \"<name>\", treat range <range> as table <id>."
+  - "Set <id> to <expr>."
+  - "Define <id> as <type>."
+  - "Call result <id>."
+
+spreadsheet:
+  - "Add column <name> to <table> as <expr>."
+  - "Filter <table> where <condition>."
+  - "Sort <table> by <expr> ascending|descending."
+  - "Group <table> by <expr>; <agg> as <name>."
+  - "Join <table1> to <table2> on <col1> = <col2>."
+  - "Lookup <col> in <table> where <condition>."
+  - "Export <expr> to \"<path>\"."
+
+web:
+  - "Use system \"<name>\" version \"<ver>\"."
+  - "Log in as credential \"<name>\"."
+  - "Log out."
+  - "Go to page \"<name>\"."
+  - "Enter \"<field>\" = <expr>."
+  - "Click \"<element>\"."
+  - "Select \"<option>\" in \"<dropdown>\"."
+  - "Wait until <condition> (timeout <duration>)."
+  - "Verify <condition>."
+  - "Extract <id> from field|element \"<selector>\"."
+  - "Download file from \"<element>\" as \"<path>\"."
+
+control:
+  - "For each <var> in <collection>: <block>"
+  - "If <condition>: <block>"
+  - "Otherwise: <block>"
+  - "On error: <action>."
+
+aggregates:
+  - sum
+  - count
+  - min
+  - max
+
+error_actions:
+  - retry <N> times
+  - skip
+  - stop
+  - Continue
+  - escalate "<msg>"

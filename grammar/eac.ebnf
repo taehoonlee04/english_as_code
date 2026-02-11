@@ -1,0 +1,91 @@
+(* English as Code (EAC) - Formal Grammar - EBNF *)
+(* Grammar must be unambiguous and LL(1)-parseable. *)
+
+program     = { statement | block } ;
+block       = "For each" identifier "in" expression ":" { statement }
+            | "If" condition ":" { statement } [ "Otherwise" ":" { statement } ]
+            ;
+
+statement   = data_decl
+            | spreadsheet_op
+            | web_op
+            | control_op
+            | comment
+            ;
+
+comment     = "--" { character } newline ;
+
+data_decl   = "Open" "workbook" string_lit "."
+            | "In" "sheet" string_lit "," "treat" "range" range_spec "as" "table" identifier "."
+            | "Set" identifier "to" expression "."
+            | "Define" identifier "as" type "."
+            | "Call" "result" identifier "."
+            ;
+
+spreadsheet_op
+            = "Add" "column" identifier ("to" | "as") expression "."
+            | "Filter" identifier "where" condition "."
+            | "Sort" identifier "by" expression ("ascending" | "descending") "."
+            | "Group" identifier "by" expression ";" aggregate { "," aggregate } "."
+            | "Join" identifier "to" identifier "on" expression "=" expression ("as" "table" identifier)? "."
+            | "Lookup" expression "in" identifier "where" condition "."
+            | "Export" expression "to" string_lit "."
+            ;
+
+web_op      = "Use" "system" string_lit "version" string_lit "."
+            | "Log" "in" "as" "credential" string_lit "."
+            | "Log" "out" "."
+            | "Go" "to" "page" string_lit "."
+            | "Enter" string_lit "=" expression "."
+            | "Click" string_lit "."
+            | "Select" string_lit "in" string_lit "."
+            | "Wait" "until" wait_condition "."
+            | "Verify" condition "."
+            | "Extract" identifier "from" ("field" | "element") string_lit "."
+            | "Download" "file" "from" string_lit "as" string_lit "."
+            ;
+
+control_op  = "On" "error" ":" error_action "."
+            ;
+
+range_spec  = identifier | ( letter digit "+" letter digit ) ;
+aggregate   = ("sum" | "count" | "min" | "max") expression "as" identifier ;
+wait_condition = expression ("is" "enabled" | "contains" "text") "(" "timeout" duration ")" ;
+error_action = "retry" integer "times" | "skip" | "stop" | "Continue" | "escalate" string_lit ;
+duration   = integer ("seconds" | "minutes" | "hours") ;
+
+condition   = expression comp_op expression
+            | condition "and" condition
+            | condition "or" condition
+            | "(" condition ")"
+            ;
+comp_op     = "=" | ">" | "<" | ">=" | "<=" | "!=" | "contains" | "in" ;
+
+expression  = term { ("+" | "-" | "and" | "or") term } ;
+term        = factor { ("*" | "/") factor } ;
+factor      = number_lit
+            | string_lit
+            | money_lit
+            | date_lit
+            | identifier
+            | identifier "." identifier
+            | "row" "." identifier
+            | "(" expression ")"
+            | function_call
+            ;
+
+function_call = identifier "(" expression { "," expression } ")" ;
+
+type        = "text" | "number" | "money" | "date" | "datetime" | "bool"
+            | "table" | "row" | "list"
+            ;
+
+number_lit  = digit { digit } [ "." digit { digit } ] ;
+string_lit  = '"' { character - '"' } '"' ;
+money_lit   = currency amount ;
+currency    = "USD" | "EUR" | "GBP" ;
+date_lit    = "date" string_lit ; (* YYYY-MM-DD *)
+letter      = "A" | "B" | ... | "Z" ;
+digit       = "0" | "1" | ... | "9" ;
+identifier  = letter { letter | digit | "_" } ;
+newline     = ? newline ? ;
